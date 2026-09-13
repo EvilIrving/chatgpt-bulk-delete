@@ -1,0 +1,32 @@
+name: Bug
+description: Something in the sidebar is missing or delete failed
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      placeholder: Buttons missing, delete 401, project row has no trash, …
+    validations:
+      required: true
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      placeholder: "131"
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options:
+        - Chats
+        - Projects
+        - Both
+        - Install / load unpacked
+    validations:
+      required: true
+  - type: input
+    id: lang
+    attributes:
+      label: ChatGPT UI language
+      placeholder: zh-CN, en-US, …

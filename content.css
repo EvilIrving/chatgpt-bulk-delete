@@ -1,0 +1,129 @@
+.cgbd-tools {
+  display: contents;
+}
+
+.cgbd-tools--overlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 20;
+  margin: 0;
+}
+
+.cgbd-tools:not(.is-on) .cgbd-on {
+  display: none;
+}
+
+.cgbd-tools.is-on .cgbd-enter {
+  display: none;
+}
+
+.cgbd-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, var(--token-text-secondary, currentColor));
+  cursor: pointer;
+  line-height: 0;
+}
+
+.cgbd-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.cgbd-btn:hover,
+.cgbd-btn:focus-visible {
+  background: transparent;
+  color: var(--text-primary, var(--token-text-primary, currentColor));
+}
+
+.cgbd-btn:focus {
+  outline: none;
+}
+
+.cgbd-btn:disabled,
+.cgbd-tools.is-busy .cgbd-btn {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cgbd-del:not(:disabled):hover,
+.cgbd-del:not(:disabled):focus-visible,
+.cgbd-row-del:hover,
+.cgbd-row-del:focus-visible {
+  color: var(--text-error, #ef4146);
+}
+
+.cgbd-row-del.is-busy {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cgbd-row-del--abs {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+}
+
+.cgbd-check {
+  appearance: none;
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, var(--token-text-secondary, currentColor));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.cgbd-check svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cgbd-check:hover,
+.cgbd-check:focus-visible,
+.cgbd-check[aria-checked="true"],
+.cgbd-check[aria-checked="mixed"] {
+  background: transparent;
+  color: var(--text-primary, var(--token-text-primary, currentColor));
+}
+
+.cgbd-check:focus {
+  outline: none;
+}
+
+.cgbd-toggle svg {
+  display: none;
+}
+
+.cgbd-toggle[aria-checked="false"] .cgbd-i-off,
+.cgbd-toggle[aria-checked="true"] .cgbd-i-on,
+.cgbd-toggle[aria-checked="mixed"] .cgbd-i-mix {
+  display: block;
+}

@@ -1,0 +1,11 @@
+name: Feature
+description: A small, concrete addition
+labels: [enhancement]
+body:
+  - type: textarea
+    id: ask
+    attributes:
+      label: What do you want
+      placeholder: Keep it in the ChatGPT sidebar. No extra panel.
+    validations:
+      required: true
