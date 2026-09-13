@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatGPT Bulk Delete",
   "version": "1.0.0",
-  "description": "Delete ChatGPT chats and projects from the sidebar. Row trash plus bulk select.",
+  "description": "Bulk delete ChatGPT chats, conversation history, and projects from the sidebar.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

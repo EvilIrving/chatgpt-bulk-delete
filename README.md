@@ -2,7 +2,7 @@
 
 [English](#chatgpt-bulk-delete) · [中文](#中文)
 
-Delete chats and projects from the ChatGPT sidebar.
+Chrome extension to bulk delete ChatGPT chats, conversation history, and projects from the sidebar on chatgpt.com.
 
 ChatGPT keeps Delete inside **•••**. This extension puts a trash icon on the row, next to edit and more, and adds checkboxes when you want to clear many chats at once.
 
@@ -47,6 +47,8 @@ If this cuts the cleanup grind, a star makes the repo easier to find.
 ---
 
 ## 中文
+
+Chrome 扩展：在 chatgpt.com 侧边栏批量删除对话、聊天记录和项目。
 
 ChatGPT 侧边栏里，删除藏在 **•••** 里，只能一条一条点。这个扩展把垃圾桶直接放在编辑 / 更多旁边，对话和项目都是。清很多对话时，点编辑旁的多选，勾上，再点删除。
 
