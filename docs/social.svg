@@ -7,5 +7,5 @@
     </g>
   </g>
   <text x="400" y="300" fill="#f4f4f4" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="56" font-weight="600">ChatGPT Bulk Delete</text>
-  <text x="400" y="368" fill="#a1a1a1" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="28">Select chats in the sidebar. Delete them in one click.</text>
+  <text x="400" y="368" fill="#a1a1a1" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="28">Trash on the row. Checkboxes for bulk. Chats and projects.</text>
 </svg>

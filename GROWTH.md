@@ -4,7 +4,7 @@
 
 ## Product
 - **Name:** ChatGPT Bulk Delete
-- **One-liner:** Chrome extension that deletes ChatGPT chats and projects from the sidebar.
+- **One-liner:** Trash on the ChatGPT sidebar row, plus bulk-select for chats.
 - **What it does:** Injects multi-select and a delete control into chatgpt.com. Bulk-select chats with checkboxes, or delete one chat or project from the row next to pin / edit / more. Calls ChatGPT's own session API. No extra panel, no store listing yet.
 - **Category:** Chrome extension for ChatGPT history cleanup
 

@@ -1,69 +1,70 @@
 # ChatGPT Bulk Delete
 
-Chrome extension that bulk-deletes [ChatGPT](https://chatgpt.com) chats and projects from the sidebar.
+[English](#chatgpt-bulk-delete) · [中文](#中文)
 
-No extra panel. No store listing. Load it unpacked from this repo.
+Delete chats and projects from the ChatGPT sidebar.
+
+ChatGPT keeps Delete inside **•••**. This extension puts a trash icon on the row, next to edit and more, and adds checkboxes when you want to clear many chats at once.
 
 <p align="center">
-  <img src="docs/social.png" width="640" alt="ChatGPT Bulk Delete: select chats in the sidebar, delete them in one click">
+  <img src="docs/social.png" width="640" alt="ChatGPT Bulk Delete">
 </p>
 
-ChatGPT still deletes one conversation at a time through the more menu. This extension puts checkboxes and a delete control on the list you already use.
+## Use
 
-## Features
+- **One chat or one project:** hover the row, click the trash next to edit / •••
+- **Many chats:** click the select icon beside Edit, check the ones you want (Shift-click a range), click trash
 
-- Multi-select chats in the sidebar, then delete them in one click
-- Shift-click a range, or use the header checkbox for the visible list
-- A delete icon on each chat and each project, next to pin / edit / more
-- Uses ChatGPT's own session API (`PATCH /backend-api/conversation/{id}`)
-- Looks like ChatGPT: icon color only, no extra hover chips
-- No extra Chrome permissions, no analytics, no remote server
+Nothing else is added to the page. No popup, no floating bar.
 
 ## Install
 
-1. Download the [latest release ZIP](https://github.com/EvilIrving/chatgpt-bulk-delete/releases/latest), or clone this repo
+Not on the Chrome Web Store. Load it unpacked:
+
+1. Download the [latest ZIP](https://github.com/EvilIrving/chatgpt-bulk-delete/releases/latest) and unzip it, or clone this repo
 2. Open `chrome://extensions`
-3. Turn on **Developer mode**
-4. **Load unpacked** and pick the folder that contains `manifest.json`
+3. Enable **Developer mode**
+4. **Load unpacked** → the folder that contains `manifest.json`
 5. Open [chatgpt.com](https://chatgpt.com) and refresh
 
-Works in Chrome, Edge, Arc, and Brave.
+Chrome, Edge, Arc, Brave.
 
 ## Privacy
 
-The extension only runs on `chatgpt.com` and `chat.openai.com`. It does not add `storage`, `identity`, or extra host permissions. Deletes go to ChatGPT's own backend with the cookie you already have. Nothing is sent to the author.
+Runs only on `chatgpt.com` and `chat.openai.com`. No `storage`, `identity`, or extra host permissions. Deletes use your existing ChatGPT session. Nothing is sent to the author. [`content.js`](content.js) is the whole feature.
 
-Read [`content.js`](content.js) if you want to verify that before loading it.
+## Notes
 
-## How it works
+- Unofficial. Not affiliated with OpenAI.
+- ChatGPT sidebar markup changes. When the buttons vanish, the selectors in `content.js` need a patch.
+- Chat delete calls ChatGPT's own API. Project delete tries that API, then the native menu if OpenAI moved the endpoint.
+- Deleted items follow OpenAI's retention rules, same as deleting them by hand.
 
-- **Chats:** `PATCH /backend-api/conversation/{id}` with `{ "is_visible": false }` (the same soft-delete ChatGPT uses)
-- **Projects:** ChatGPT's gizmo/project API, with a fallback to the native delete menu if the API shape has changed
-- **UI:** a content script in the page, so it can use your existing session. Selectors will break when OpenAI redesigns the sidebar. PRs welcome.
+MIT. Icons: [Remix Icon](https://remixicon.com).
 
-## Not affiliated
-
-Unofficial. Not made by, endorsed by, or affiliated with OpenAI. ChatGPT is a trademark of OpenAI.
-
-## Limits
-
-- ChatGPT DOM changes can hide the buttons until the selectors are updated
-- Not on the Chrome Web Store
-- Project delete may fall back to ChatGPT's own confirm dialog
-- Deleted chats follow OpenAI's retention rules, same as deleting them by hand
-
-## License
-
-MIT. Icons from [Remix Icon](https://remixicon.com).
-
-If this saves you a slog through the sidebar, a star helps other people find it.
+If this cuts the cleanup grind, a star makes the repo easier to find.
 
 ---
 
 ## 中文
 
-在 chatgpt.com 侧边栏勾选对话，一键删除。每条聊天和每个项目旁边也可以直接点删除，不用进「更多」。
+ChatGPT 侧边栏里，删除藏在 **•••** 里，只能一条一条点。这个扩展把垃圾桶直接放在编辑 / 更多旁边，对话和项目都是。清很多对话时，点编辑旁的多选，勾上，再点删除。
 
-**安装：** 下载 [Release ZIP](https://github.com/EvilIrving/chatgpt-bulk-delete/releases/latest) 或 clone 本仓库 → `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选中含 `manifest.json` 的目录 → 打开 chatgpt.com 并刷新。
+页面上不加说明、不加浮层、不加弹窗。
 
-只在 ChatGPT 官网运行，没有额外权限，没有统计，不经过作者的服务器。非正式产品，与 OpenAI 无关。
+### 用法
+
+- **删一条对话或一个项目：** 悬停那一行，点编辑 / ••• 旁边的垃圾桶
+- **删很多对话：** 点「编辑」旁的多选图标，勾选（Shift 连选），点垃圾桶
+
+### 安装
+
+还没上架 Chrome 商店。用「加载已解压的扩展程序」：
+
+1. 下载 [最新 ZIP](https://github.com/EvilIrving/chatgpt-bulk-delete/releases/latest) 并解压，或 clone 本仓库
+2. 打开 `chrome://extensions`
+3. 打开「开发者模式」
+4. 「加载已解压的扩展程序」→ 选中里面有 `manifest.json` 的目录
+5. 打开 [chatgpt.com](https://chatgpt.com) 并刷新
+
+只在 ChatGPT 官网运行。没有额外权限，没有统计，请求只发给 ChatGPT。非正式产品，与 OpenAI 无关。
