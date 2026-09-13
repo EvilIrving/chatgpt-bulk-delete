@@ -4,8 +4,8 @@ Chrome extension that bulk-deletes [ChatGPT](https://chatgpt.com) chats and proj
 
 No extra panel. No store listing. Load it unpacked from this repo.
 
-<p>
-  <img src="icons/icon128.png" width="96" height="96" alt="ChatGPT Bulk Delete icon">
+<p align="center">
+  <img src="docs/social.png" width="640" alt="ChatGPT Bulk Delete: select chats in the sidebar, delete them in one click">
 </p>
 
 ChatGPT still deletes one conversation at a time through the more menu. This extension puts checkboxes and a delete control on the list you already use.
