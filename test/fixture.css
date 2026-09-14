@@ -1,0 +1,132 @@
+/* Layout shim for the sidebar fixture.
+   Only the properties that decide whether content.js's injected controls can be
+   seen, clicked or mispositioned are modelled:
+     - the sidebar scrollport is position:relative   (so an absolutely positioned
+       leftover lands against the sidebar, not against its row)
+     - chat row actions live in a hover-only .trailing container
+     - project row actions live in an absolutely positioned, opacity:0 group and
+       the row reserves 4rem for exactly two of them (ChatGPT's pe-16)
+   Class names mirror the real markup, including the odd ones with a slash. */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font: 400 14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif;
+  color: #0d0d0d;
+  background: #fff;
+  display: flex;
+}
+ul { margin: 0; padding: 0; list-style: none; }
+li { list-style: none; }
+
+/* --- sidebar shell: real nav is class="group/scrollport relative ... overflow-y-auto" --- */
+nav#sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  height: 100vh;
+  padding: 8px;
+  overflow-y: auto;
+  background: #f9f9f9;
+}
+
+/* --- sections --- */
+[class~="group/sidebar-expando-section"] { margin-bottom: 10px; }
+[class~="group/sidebar-expando-section-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 6px;
+}
+h2.__menu-label { margin: 0; padding: 6px 8px; font-size: 13px; font-weight: 500; color: #8f8f8f; }
+.trailing-head { display: flex; align-items: center; gap: 8px; }
+
+/* --- native icon buttons --- */
+[data-trailing-button], .hdr-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #8f8f8f;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
+[data-trailing-button]:hover, .hdr-btn:hover { background: #ececec; color: #0d0d0d; }
+
+/* --- chat rows: a.__menu-item with a hover-revealed .trailing group --- */
+a.__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+a.__menu-item:hover, a.__menu-item[data-active] { background: #ececec; }
+a.__menu-item .title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.__menu-item .trailing {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+}
+a.__menu-item:hover .trailing { opacity: 1; }
+
+/* --- project rows: div.group/project-unfurl-row.relative + absolute action group --- */
+[class*="group/project-unfurl-row"] { position: relative; }
+[class*="project-unfurl-row"] > [role="button"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+[class*="project-unfurl-row"] > [role="button"] .title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* can-hover:group-hover/project-unfurl-row:pe-16 — room for two native actions */
+[class*="project-unfurl-row"]:hover > [role="button"] { background: #ececec; padding-right: 4rem; }
+.project-actions {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 16px; /* end-4 */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+}
+[class*="project-unfurl-row"]:hover .project-actions { opacity: 1; pointer-events: auto; }
+
+/* --- fixture-only: replicate the :hover state from an attribute, for screenshots
+       (headless Chrome cannot be hovered; test/run.mjs uses CDP forcePseudoState
+       instead when it needs the real thing) --- */
+[class*="project-unfurl-row"][data-force-hover] .project-actions { opacity: 1; pointer-events: auto; }
+[class*="project-unfurl-row"][data-force-hover] > [role="button"] { background: #ececec; padding-right: 4rem; }
+a.__menu-item[data-force-hover] { background: #ececec; }
+a.__menu-item[data-force-hover] .trailing { opacity: 1; }
+
+/* --- fixture-only: outline the injected controls so screenshots are readable --- */
+.cgbd-row-del:not(.cgbd-row-del--abs) { outline: 1px solid #1a73e8; }
+.cgbd-row-del--abs { outline: 2px solid #d93025; outline-offset: 2px; }
+.cgbd-tools .cgbd-btn { outline: 1px dashed #188038; }
+
+/* --- fixture-only: keep the JSON report out of the way of screenshots --- */
+#report { position: fixed; left: -9999px; top: 0; margin: 0; }

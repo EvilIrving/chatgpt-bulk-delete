@@ -127,3 +127,17 @@
 .cgbd-toggle[aria-checked="mixed"] .cgbd-i-mix {
   display: block;
 }
+
+/* ChatGPT reserves exactly 4rem on a project row for the two actions it renders
+   itself (can-hover:group-hover/project-unfurl-row:pe-16). Our third button would
+   otherwise sit on top of the project name, so reserve its real width too:
+   content.js measures the action group and sets --cgbd-row-reserve on the row. */
+[class*="project-unfurl-row"]:has(.cgbd-row-del):hover > [role="button"] {
+  padding-right: var(--cgbd-row-reserve, 4rem);
+}
+
+@media (hover: none) {
+  [class*="project-unfurl-row"]:has(.cgbd-row-del) > [role="button"] {
+    padding-right: var(--cgbd-row-reserve, 4rem);
+  }
+}

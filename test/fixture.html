@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>ChatGPT sidebar fixture — cgbd regression test</title>
+<!-- The fixture reproduces the class names, containment and hover behaviour of
+     the real chatgpt.com sidebar, including all the elements content.js pokes
+     at: the expando sections, #history, a.__menu-item, and the absolutely
+     positioned project action group. content.css/content.js load unchanged. -->
+<link rel="stylesheet" href="fixture.css">
+<link rel="stylesheet" href="content.css">
+</head>
+<body>
+<nav id="sidebar" class="group/scrollport relative">
+  <div class="group/sidebar-expando-section">
+    <div class="group/sidebar-expando-section-header">
+      <button type="button" aria-expanded="true"><h2 class="__menu-label">项目</h2></button>
+      <div class="trailing-head">
+        <button class="hdr-btn" type="button" aria-label="新项目">+</button>
+        <button class="hdr-btn" type="button" aria-label="整理项目" aria-haspopup="menu">…</button>
+      </div>
+    </div>
+    <ul id="projects"></ul>
+  </div>
+
+  <div class="group/sidebar-expando-section">
+    <div class="group/sidebar-expando-section-header">
+      <button type="button" aria-expanded="true"><h2 class="__menu-label">聊天</h2></button>
+      <div class="trailing-head">
+        <a class="hdr-btn" aria-label="新聊天" href="/">+</a>
+        <button class="hdr-btn" type="button" aria-label="整理聊天" aria-haspopup="menu">…</button>
+      </div>
+    </div>
+    <div id="history"><ul id="chats"></ul></div>
+  </div>
+</nav>
+
+<script src="fixture.js"></script>
+<script src="content.js"></script>
+</body>
+</html>

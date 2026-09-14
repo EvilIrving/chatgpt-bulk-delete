@@ -17,7 +17,6 @@
     boxMix: '<svg class="cgbd-i-mix" viewBox="0 0 24 24" fill="currentColor"><path d="M4 3H20C20.5523 3 21 3.44772 21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3ZM7 11V13H17V11H7Z"/></svg>',
   };
   const TOGGLE = ICON.boxOff + ICON.boxOn + ICON.boxMix;
-  const REMIX_TRASH = ICON.trash;
 
   function svgMarkup(svg) {
     const clone = svg.cloneNode(true);
@@ -42,20 +41,25 @@
     return null;
   }
 
+  // Adopt ChatGPT's own delete glyph once, the first time a delete menu item is
+  // reachable, and keep it. Re-deriving it on every pass made the row icons flip
+  // between the native glyph and the bundled one.
+  let trashLocked = false;
   function applyTrashIcon() {
-    const markup = nativeDeleteIcon() || REMIX_TRASH;
-    if (markup === ICON.trash) return;
+    if (trashLocked) return;
+    const markup = nativeDeleteIcon();
+    if (!markup) return;
+    trashLocked = true;
     ICON.trash = markup;
-    delBtn.innerHTML = ICON.trash;
+    delBtn.innerHTML = markup;
     for (const btn of document.querySelectorAll(".cgbd-row-del")) {
-      btn.innerHTML = ICON.trash;
+      btn.innerHTML = markup;
     }
   }
 
   const state = {
     selecting: false,
     deleting: false,
-    muted: false,
     selected: new Set(),
     deleted: new Set(),
     lastId: null,
@@ -217,6 +221,8 @@
           btn.closest("a[href], li, [class*='group/']") ||
           btn.parentElement?.parentElement;
         if (!row || row === scopes[0]) continue;
+        // The section header itself answers `[class*='group/']`; it is not a row.
+        if (row.closest("[class*='sidebar-expando-section-header']")) continue;
         const t = textOf(row);
         if (!t || PROJECT_SECTION_RE.test(t) || SKIP_PROJECT_ROW_RE.test(t)) continue;
         const id = projectIdFromEl(row) || "name:" + t.slice(0, 80);
@@ -228,8 +234,8 @@
     return out;
   }
 
-  function visibleIds() {
-    return conversationLinks()
+  function visibleIds(links) {
+    return (links || conversationLinks())
       .map((a) => idFromHref(a.href))
       .filter((id) => id && !state.deleted.has(id));
   }
@@ -313,33 +319,48 @@
     return btn;
   }
 
+  function inlineHost(owner) {
+    if (owner.matches('a, [role="button"]')) return owner;
+    return owner.querySelector(':scope > [role="button"], :scope > a');
+  }
+
   function placeRowDelete(owner, kind, id) {
-    const existing = [...owner.querySelectorAll(".cgbd-row-del")].find(
-      (b) => b.dataset.cgbdId === id
-    );
-    if (existing && existing.isConnected) {
-      const current = findRowActionAnchor(owner);
-      if (current && existing.previousElementSibling !== current) {
-        current.insertAdjacentElement("afterend", existing);
-        existing.classList.remove("cgbd-row-del--abs");
-        matchSizeOne(current, existing);
-      }
-      return;
-    }
-    existing?.remove();
-    const btn = makeRowDelete(kind, id);
     const anchor = findRowActionAnchor(owner);
+    const all = [...owner.querySelectorAll(".cgbd-row-del")];
+    const keep = all.find((b) => b.dataset.cgbdId === id);
+    // A row must never carry two trash buttons. Only the button whose id matched
+    // was removed before, so a leftover from another build or an earlier id
+    // stayed on the row forever.
+    for (const b of all) {
+      if (b !== keep) b.remove();
+    }
+
+    const btn = keep && keep.isConnected ? keep : makeRowDelete(kind, id);
+    btn.classList.remove("cgbd-row-del--abs");
+    btn.dataset.cgbdKind = kind;
+
     if (anchor) {
-      anchor.insertAdjacentElement("afterend", btn);
+      if (
+        btn.parentElement !== anchor.parentElement ||
+        btn.previousElementSibling !== anchor
+      ) {
+        anchor.insertAdjacentElement("afterend", btn);
+      }
       matchSizeOne(anchor, btn);
       return;
     }
-    if (getComputedStyle(owner).position === "static") {
-      if (owner.dataset.cgbdPos == null) owner.dataset.cgbdPos = owner.style.position;
-      owner.style.position = "relative";
+
+    // No native action button to sit next to: keep the icon inside the row flow
+    // instead of floating it against the whole sidebar, and skip the row when
+    // there is nowhere sane to put it.
+    const host = inlineHost(owner);
+    if (!host) {
+      btn.remove();
+      return;
     }
-    btn.classList.add("cgbd-row-del--abs");
-    owner.appendChild(btn);
+    if (btn.parentElement !== host) host.appendChild(btn);
+    btn.style.removeProperty("width");
+    btn.style.removeProperty("height");
   }
 
   function isEditButton(btn) {
@@ -430,6 +451,24 @@
     return btn;
   }
 
+  // Undo everything we wrote onto one of ChatGPT's own elements. `cgbdPos` was
+  // saved but never used to restore, so leaving select mode left
+  // `position: relative` on every row for the rest of the page's life.
+  function restoreRow(owner) {
+    owner.querySelector(":scope > .cgbd-check")?.remove();
+    if (owner.dataset.cgbdPad != null) {
+      owner.style.paddingLeft = owner.dataset.cgbdPad;
+      delete owner.dataset.cgbdPad;
+    }
+    if (owner.dataset.cgbdPos != null) {
+      owner.style.position = owner.dataset.cgbdPos;
+      delete owner.dataset.cgbdPos;
+    }
+    if (owner.style.getPropertyValue("--cgbd-row-reserve")) {
+      owner.style.removeProperty("--cgbd-row-reserve");
+    }
+  }
+
   function ensureRow(link) {
     const id = idFromHref(link.href);
     if (!id) return;
@@ -441,11 +480,7 @@
     owner.dataset.cgbdId = id;
     owner.dataset.cgbdKind = "chat";
     if (!state.selecting) {
-      owner.querySelector(":scope > .cgbd-check")?.remove();
-      if (owner.dataset.cgbdPad != null) {
-        owner.style.paddingLeft = owner.dataset.cgbdPad;
-        delete owner.dataset.cgbdPad;
-      }
+      restoreRow(owner);
     } else {
       if (getComputedStyle(owner).position === "static") {
         if (owner.dataset.cgbdPos == null) owner.dataset.cgbdPos = owner.style.position;
@@ -474,22 +509,36 @@
     owner.dataset.cgbdId = id;
     owner.dataset.cgbdKind = "project";
     placeRowDelete(owner, "project", id);
+    reserveProjectActions(owner);
+  }
+
+  // ChatGPT reserves room on a project row for the two actions it renders
+  // itself. Measure that action group with our button in it and hand the width
+  // to CSS, so the third icon never lands on top of the project name.
+  function reserveProjectActions(owner) {
+    const btn = owner.querySelector(".cgbd-row-del");
+    const group = btn?.parentElement;
+    if (!btn || !group || group === owner) return;
+    const w = Math.round(group.getBoundingClientRect().width);
+    if (w < 16 || w > 400) return;
+    owner.style.setProperty("--cgbd-row-reserve", w + 24 + "px"); // + end-4 + slack
   }
 
   function setChecked(el, on) {
     el.setAttribute("aria-checked", on ? "true" : "false");
   }
 
-  function paint() {
+  function paint(links) {
     tools.classList.toggle("is-on", state.selecting);
     tools.classList.toggle("is-busy", state.deleting);
-    const ids = visibleIds();
+    const all = links || conversationLinks();
+    const ids = visibleIds(all);
     const n = ids.filter((id) => state.selected.has(id)).length;
     delBtn.disabled = state.deleting || n === 0;
     const allOn = ids.length > 0 && n === ids.length;
     const mixed = n > 0 && !allOn;
     allBtn.setAttribute("aria-checked", mixed ? "mixed" : allOn ? "true" : "false");
-    for (const link of conversationLinks()) {
+    for (const link of all) {
       const id = idFromHref(link.href);
       const owner = rowOwner(link);
       const box = owner.querySelector(":scope > .cgbd-check");
@@ -497,19 +546,117 @@
     }
   }
 
+  let syncing = false;
+  let pending = false;
+  let timer = 0;
+  let reruns = 0;
+  const warned = new Map();
+
+  function warn(what, err) {
+    const key = what + ":" + (err && err.message);
+    const now = Date.now();
+    if (now - (warned.get(key) || 0) < 30000) return;
+    warned.set(key, now);
+    console.warn("[cgbd]", what, err);
+  }
+
+  // One broken row must never abort the pass or block the rows after it.
+  function safe(what, fn) {
+    try {
+      fn();
+    } catch (err) {
+      warn(what, err);
+    }
+  }
+
+  function schedule(delay) {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = 0;
+      sync();
+    }, delay);
+  }
+
+  function laidOut(el) {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width >= 8 && r.height >= 8;
+  }
+
+  function currentIds(projects) {
+    const ids = new Set();
+    const root = sidebarRoot();
+    if (root) {
+      for (const a of root.querySelectorAll('a[href*="/c/"]')) {
+        const id = idFromHref(a.href);
+        if (id) ids.add(id);
+      }
+    }
+    for (const row of projects || projectRows()) if (row.id) ids.add(row.id);
+    return ids;
+  }
+
+  // Drop anything an older build, a renamed project or a re-render left behind,
+  // instead of stacking a second icon on the same row. Rows that are not
+  // rendered right now are left alone: they cannot be judged, and they get
+  // swept on a later pass.
+  function sweep(ids) {
+    for (const el of document.querySelectorAll(".cgbd-tools")) {
+      if (el !== tools) el.remove();
+    }
+
+    for (const btn of document.querySelectorAll(".cgbd-btn")) {
+      if (tools.contains(btn)) continue;
+      const isRowDel = btn.classList.contains("cgbd-row-del");
+      const isCheck = btn.classList.contains("cgbd-check");
+      if (!isRowDel && !isCheck) {
+        btn.remove();
+        continue;
+      }
+      const owner = btn.closest("[data-cgbd-id]");
+      const id = isRowDel ? btn.dataset.cgbdId : owner?.dataset.cgbdId;
+      if (isCheck && !state.selecting) {
+        if (laidOut(btn)) btn.remove();
+        continue;
+      }
+      if (id && ids.has(id)) continue;
+      if (!laidOut(btn)) continue;
+      btn.remove();
+    }
+
+    if (!state.selecting) {
+      for (const el of document.querySelectorAll("[data-cgbd-pad], [data-cgbd-pos]")) {
+        if (laidOut(el)) restoreRow(el);
+      }
+    }
+  }
+
   function sync() {
-    if (state.muted) return;
-    state.muted = true;
+    if (syncing) {
+      pending = true;
+      return;
+    }
+    syncing = true;
     try {
       placeTools();
       applyTrashIcon();
-      for (const link of conversationLinks()) ensureRow(link);
-      for (const row of projectRows()) ensureProject(row);
-      paint();
+      const links = conversationLinks();
+      for (const link of links) safe("chat row", () => ensureRow(link));
+      const projects = projectRows();
+      for (const row of projects) safe("project row", () => ensureProject(row));
+      safe("sweep", () => sweep(currentIds(projects)));
+      safe("paint", () => paint(links));
+    } catch (err) {
+      warn("sync", err);
     } finally {
-      queueMicrotask(() => {
-        state.muted = false;
-      });
+      syncing = false;
+      if (pending) {
+        pending = false;
+        reruns++;
+        schedule(reruns > 3 ? 400 : 0);
+      } else {
+        reruns = 0;
+      }
     }
   }
 
@@ -700,7 +847,10 @@
     } finally {
       btn?.classList.remove("is-busy");
     }
-    if (!ok) return;
+    if (!ok) {
+      warn("delete " + kind + " " + id, new Error("request failed"));
+      return;
+    }
     state.deleted.add(id);
     state.selected.delete(id);
     for (const el of document.querySelectorAll(`[data-cgbd-id="${CSS.escape(id)}"]`)) {
@@ -815,16 +965,22 @@
     if (e.key === "Escape" && state.selecting && !state.deleting) exitSelect();
   });
 
-  let timer = 0;
   const obs = new MutationObserver(() => {
-    if (state.muted) return;
-    clearTimeout(timer);
-    timer = setTimeout(sync, 60);
+    // Never drop a batch. The old mutex version returned early for every change
+    // that arrived while a pass was running, and nothing ever retried it.
+    if (syncing) {
+      pending = true;
+      return;
+    }
+    schedule(60);
   });
   obs.observe(document.documentElement, { childList: true, subtree: true });
 
   sync();
+  // Unconditional repair tick. The old version only re-synced when the toolbar
+  // itself was gone, so rows ChatGPT re-rendered stayed bare indefinitely.
   setInterval(() => {
-    if (!tools.isConnected) sync();
+    if (document.hidden) return;
+    sync();
   }, 1500);
 })();
