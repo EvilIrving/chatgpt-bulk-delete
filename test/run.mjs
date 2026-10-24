@@ -61,6 +61,8 @@ const SCENARIOS = [
   { mode: "syncwipe", why: "a list rebuild mid-injection is repaired" },
   { mode: "noanchor", why: "no native anchor: stay in the row, never float" },
   { mode: "collapsed", why: "a collapsed section is not mistaken for stale markup" },
+  { mode: "optimistic", why: "rows leave the sidebar before the API answers" },
+  { mode: "optimisticfail", why: "a rejected delete puts the row back" },
   { mode: "projhover", why: "the third project icon clears the project name" },
 ];
 
@@ -113,6 +115,20 @@ function checkReport(mode, report) {
   }
   if (mode === "noanchor") {
     check(mode, "no floating fallback without an anchor", counts.absTrash, 0);
+  }
+  if (mode === "optimistic" || mode === "optimisticfail") {
+    const [early, settled] = report.optimistic || [];
+    check(mode, "row leaves before the API answers", early?.visibleRows, 0);
+    check(mode, "select mode is left immediately", early?.selectMode, false);
+    check(mode, "checkboxes go with it", early?.checkboxes, 0);
+    check(mode, "the request was still sent", early?.requests, 5);
+    if (mode === "optimistic") {
+      check(mode, "rows stay gone once the API answers", settled?.visibleRows, 0);
+      check(mode, "every row was deleted, not just hidden", settled?.requests, 5);
+    } else {
+      check(mode, "a rejected row comes back", settled?.visibleRows, 5);
+      check(mode, "rollback leaves no inline style", (settled?.residue || []).filter((s) => s.trim() !== ""), []);
+    }
   }
   if (mode === "projhover") {
     check(mode, "fixture-side hover geometry (attribute emulation)", report.hover?.overlapPx, "<= -1", (report.hover?.overlapPx ?? 1) <= -1);

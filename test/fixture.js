@@ -17,13 +17,17 @@
  *              injecting (what React does when a foreign node appears)
  *   noanchor   chat rows with no native ••• button at all
  *   collapsed  the chat section is collapsed and re-expanded after injection
+ *   optimistic the delete API answers slowly, to see when a row actually leaves
+ *              the sidebar, and that the requests still land
+ *   optimisticfail the same with the API rejecting the delete, to prove the row
+ *              comes back instead of vanishing for good
  *   projhover  one long project name with the hover state forced (attribute
  *              emulation for screenshots, real :hover via CDP in run.mjs)
  *
  * The result is written as JSON into <pre id="report"> a moment after load. */
 
 const MODE = new URLSearchParams(location.search).get("mode") || "normal";
-const REPORT_AT = 2800;
+const REPORT_AT = MODE === "optimistic" ? 4200 : MODE === "optimisticfail" ? 3200 : 2800;
 
 const PROJECTS = ["韩国签证", "聊产品 idea", "between us", "家庭厨房", "金融"];
 
@@ -177,6 +181,74 @@ if (MODE === "projhover") {
   if (title) title.textContent = "韩国签证材料清单与行程规划";
 }
 
+/* --- optimistic / optimisticfail: the delete API, answered by the fixture --
+ * content.js authenticates with /api/auth/session and then PATCHes
+ * /backend-api/conversation/<id>. The fixture answers both, slowly enough that
+ * a row still waiting on the request would be on screen in the sample taken
+ * right after the click. */
+const apiLog = [];
+if (MODE === "optimistic" || MODE === "optimisticfail") {
+  const failed = MODE === "optimisticfail";
+  const realFetch = window.fetch.bind(window);
+  const json = (body, status) =>
+    Promise.resolve(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      })
+    );
+  window.fetch = (input, init = {}) => {
+    const url = String(input);
+    if (url.includes("/api/auth/session")) return json({ accessToken: "fixture.token.value" }, 200);
+    if (url.includes("/backend-api/conversation/")) {
+      apiLog.push({ id: decodeURIComponent(url.split("/").pop()), method: init.method || "GET" });
+      return new Promise((resolve) =>
+        setTimeout(
+          () =>
+            resolve(
+              new Response(failed ? '{"detail":"fixture said no"}' : "{}", {
+                status: failed ? 400 : 200,
+              })
+            ),
+          1500
+        )
+      );
+    }
+    return realFetch(input, init);
+  };
+}
+
+/* --- optimistic: how fast a row reacts to the click ---------------------- */
+let optimistic = null;
+if (MODE === "optimistic" || MODE === "optimisticfail") {
+  const sample = (phase) => {
+    const rows = [...document.querySelectorAll("#chats a.__menu-item")];
+    const shown = rows.filter((a) => a.offsetParent !== null);
+    return {
+      phase,
+      at: Math.round(performance.now()),
+      rows: rows.length,
+      visibleRows: shown.length,
+      requests: apiLog.length,
+      checkboxes: document.querySelectorAll(".cgbd-check").length,
+      selectMode: Boolean(document.querySelector(".cgbd-tools")?.classList.contains("is-on")),
+      residue: shown.map((a) => a.getAttribute("style") || ""),
+    };
+  };
+  const shots = [];
+  setTimeout(() => document.querySelector(".cgbd-enter")?.click(), 300);
+  setTimeout(() => document.querySelector(".cgbd-all")?.click(), 600);
+  setTimeout(() => document.querySelector(".cgbd-del")?.click(), 900);
+  setTimeout(() => shots.push(sample("justAfterClick")), 1000);
+  setTimeout(
+    () => {
+      shots.push(sample("settled"));
+      optimistic = shots;
+    },
+    MODE === "optimistic" ? 4000 : 3000
+  );
+}
+
 /* --- report ------------------------------------------------------------- */
 function rect(el) {
   const r = el.getBoundingClientRect();
@@ -239,6 +311,7 @@ setTimeout(() => {
     residueAfterSelect,
     collapse,
     churn,
+    optimistic,
     hover: MODE === "projhover" ? hoverGeometry() : null,
   };
   const pre = document.createElement("pre");

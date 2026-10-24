@@ -61,11 +61,41 @@
     selecting: false,
     deleting: false,
     selected: new Set(),
+    pending: new Set(),
     deleted: new Set(),
     lastId: null,
     token: null,
     tokenAt: 0,
   };
+
+  // Deletes are optimistic: `pending` is in flight, `deleted` came back ok. A
+  // row leaves the sidebar as soon as the user commits, not after the last
+  // round trip of the batch.
+  function gone(id) {
+    return state.deleted.has(id) || state.pending.has(id);
+  }
+
+  function rowsFor(id) {
+    return document.querySelectorAll(`[data-cgbd-id="${CSS.escape(id)}"]`);
+  }
+
+  // The inline display ChatGPT had is remembered on the node, so a failed
+  // delete can put the row back exactly as it was.
+  function hideRow(id) {
+    for (const el of rowsFor(id)) {
+      if (el.classList.contains("cgbd-row-del")) continue;
+      if (el.dataset.cgbdDisplay == null) el.dataset.cgbdDisplay = el.style.display || "";
+      el.style.display = "none";
+    }
+  }
+
+  function showRow(id) {
+    for (const el of rowsFor(id)) {
+      if (el.dataset.cgbdDisplay == null) continue;
+      el.style.display = el.dataset.cgbdDisplay;
+      delete el.dataset.cgbdDisplay;
+    }
+  }
 
   const tools = document.createElement("div");
   tools.className = "cgbd-tools";
@@ -164,7 +194,7 @@
       const id = idFromHref(a.href);
       if (!id || seen.has(id)) continue;
       const r = a.getBoundingClientRect();
-      if (!state.deleted.has(id) && (r.width < 8 || r.height < 8)) continue;
+      if (!gone(id) && (r.width < 8 || r.height < 8)) continue;
       seen.add(id);
       out.push(a);
     }
@@ -203,7 +233,7 @@
         const r = el.getBoundingClientRect();
         if (r.height < 18 || r.width < 40) continue;
         const id = projectIdFromEl(el) || "name:" + t.slice(0, 80);
-        if (seen.has(id) || state.deleted.has(id)) continue;
+        if (seen.has(id) || gone(id)) continue;
         seen.add(id);
         out.push({ el, id });
       }
@@ -226,7 +256,7 @@
         const t = textOf(row);
         if (!t || PROJECT_SECTION_RE.test(t) || SKIP_PROJECT_ROW_RE.test(t)) continue;
         const id = projectIdFromEl(row) || "name:" + t.slice(0, 80);
-        if (seen.has(id) || state.deleted.has(id)) continue;
+        if (seen.has(id) || gone(id)) continue;
         seen.add(id);
         out.push({ el: row, id });
       }
@@ -237,7 +267,7 @@
   function visibleIds(links) {
     return (links || conversationLinks())
       .map((a) => idFromHref(a.href))
-      .filter((id) => id && !state.deleted.has(id));
+      .filter((id) => id && !gone(id));
   }
 
   function rowOwner(link) {
@@ -473,12 +503,16 @@
     const id = idFromHref(link.href);
     if (!id) return;
     const owner = rowOwner(link);
-    if (state.deleted.has(id)) {
-      owner.style.display = "none";
-      return;
-    }
     owner.dataset.cgbdId = id;
     owner.dataset.cgbdKind = "chat";
+    if (gone(id)) {
+      // The checkbox is not the row's own markup, and the row is about to be
+      // hidden, so sweep() can no longer judge it. Drop it here, or one checkbox
+      // per optimistically deleted row outlives select mode.
+      restoreRow(owner);
+      hideRow(id);
+      return;
+    }
     if (!state.selecting) {
       restoreRow(owner);
     } else {
@@ -502,12 +536,12 @@
     const { el, id } = row;
     if (!id) return;
     const owner = projectOwner(el);
-    if (state.deleted.has(id)) {
-      owner.style.display = "none";
-      return;
-    }
     owner.dataset.cgbdId = id;
     owner.dataset.cgbdKind = "project";
+    if (gone(id)) {
+      hideRow(id);
+      return;
+    }
     placeRowDelete(owner, "project", id);
     reserveProjectActions(owner);
   }
@@ -835,28 +869,39 @@
   }
 
   async function deleteRow(kind, id) {
-    if (!id || state.deleted.has(id)) return;
+    if (!id || gone(id)) return;
     const btn = document.querySelector(`.cgbd-row-del[data-cgbd-id="${CSS.escape(id)}"]`);
     const owner =
       btn?.closest("[data-cgbd-id]") ||
       document.querySelector(`[data-cgbd-id="${CSS.escape(id)}"]`);
-    if (btn) btn.classList.add("is-busy");
+    // A project may still need ChatGPT's own ••• menu, which has to stay
+    // clickable, so only a chat leaves the sidebar before the request answers.
+    const optimistic = kind === "chat";
+    if (optimistic) {
+      state.pending.add(id);
+      hideRow(id);
+      paint();
+    } else if (btn) {
+      btn.classList.add("is-busy");
+    }
     let ok = false;
     try {
       ok = kind === "project" ? await deleteProject(id, owner) : await deleteOne(id);
     } finally {
-      btn?.classList.remove("is-busy");
+      if (!optimistic) btn?.classList.remove("is-busy");
     }
+    state.pending.delete(id);
     if (!ok) {
       warn("delete " + kind + " " + id, new Error("request failed"));
+      if (optimistic) {
+        showRow(id);
+        sync();
+      }
       return;
     }
     state.deleted.add(id);
     state.selected.delete(id);
-    for (const el of document.querySelectorAll(`[data-cgbd-id="${CSS.escape(id)}"]`)) {
-      if (el.classList.contains("cgbd-row-del")) continue;
-      el.style.display = "none";
-    }
+    hideRow(id);
     const path = location.pathname;
     if (kind === "chat" && currentId() === id) location.assign("/");
     else if (kind === "project" && path.includes(id)) location.assign("/");
@@ -879,19 +924,21 @@
     const ids = visibleIds().filter((id) => state.selected.has(id));
     if (!ids.length) return;
     state.deleting = true;
-    paint();
-    const failed = [];
     const opened = currentId();
+    // Leave the sidebar and select mode first, ask second. The rows used to sit
+    // untouched for the whole pool, one round trip after another, before any of
+    // them disappeared.
+    for (const id of ids) {
+      state.pending.add(id);
+      hideRow(id);
+    }
+    exitSelect();
+    const failed = [];
     try {
       await mapPool(ids, 5, async (id) => {
         try {
-          const ok = await deleteOne(id);
-          if (ok) {
-            state.deleted.add(id);
-            state.selected.delete(id);
-          } else {
-            failed.push(id);
-          }
+          if (await deleteOne(id)) state.deleted.add(id);
+          else failed.push(id);
         } catch {
           failed.push(id);
         }
@@ -899,12 +946,15 @@
     } finally {
       state.deleting = false;
     }
+    for (const id of ids) state.pending.delete(id);
+    for (const id of failed) showRow(id);
+    if (failed.length) warn("delete batch", new Error(failed.length + " of " + ids.length + " failed"));
+    // Navigating before the pool drains would abort the requests still in flight.
     if (opened && state.deleted.has(opened)) {
       location.assign("/");
       return;
     }
-    if (!failed.length) exitSelect();
-    else sync();
+    sync();
   }
 
   function stop(e) {
