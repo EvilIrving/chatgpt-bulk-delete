@@ -100,10 +100,10 @@
   const tools = document.createElement("div");
   tools.className = "cgbd-tools";
   tools.innerHTML =
-    `<button type="button" class="cgbd-btn cgbd-enter" aria-label="Select">${ICON.list}</button>` +
+    `<button type="button" class="cgbd-btn cgbd-enter" aria-label="Select chats">${ICON.list}</button>` +
     `<button type="button" class="cgbd-btn cgbd-toggle cgbd-on cgbd-all" role="checkbox" aria-checked="false" aria-label="Select all">${TOGGLE}</button>` +
-    `<button type="button" class="cgbd-btn cgbd-on cgbd-del" aria-label="Delete" disabled>${ICON.trash}</button>` +
-    `<button type="button" class="cgbd-btn cgbd-on cgbd-x" aria-label="Close">${ICON.x}</button>`;
+    `<button type="button" class="cgbd-btn cgbd-on cgbd-del" aria-label="Delete selected chats" disabled>${ICON.trash}</button>` +
+    `<button type="button" class="cgbd-btn cgbd-on cgbd-x" aria-label="Cancel selection">${ICON.x}</button>`;
 
   const enterBtn = tools.querySelector(".cgbd-enter");
   const allBtn = tools.querySelector(".cgbd-all");
@@ -116,10 +116,10 @@
 
   function labelize() {
     const z = zh();
-    enterBtn.setAttribute("aria-label", z ? "选择" : "Select");
-    allBtn.setAttribute("aria-label", z ? "全选" : "Select all");
-    delBtn.setAttribute("aria-label", z ? "删除" : "Delete");
-    closeBtn.setAttribute("aria-label", z ? "关闭" : "Close");
+    enterBtn.setAttribute("aria-label", z ? "批量选择对话" : "Select chats");
+    allBtn.setAttribute("aria-label", z ? "全选对话" : "Select all");
+    delBtn.setAttribute("aria-label", z ? "删除所选对话" : "Delete selected chats");
+    closeBtn.setAttribute("aria-label", z ? "取消选择" : "Cancel selection");
   }
 
   function sleep(ms) {
